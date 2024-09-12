@@ -1,0 +1,6 @@
+
+#!/bin/bash
+
+fly -t main login --team-name main --concourse-url https://concourse.robertaldis.com
+fly -t main set-pipeline -c pipeline.yaml -p testing-pipeline
+

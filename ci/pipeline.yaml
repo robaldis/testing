@@ -1,0 +1,123 @@
+
+resources:
+- name: source-code
+  type: git
+  source:
+    uri: git@github.com:robaldis/${name}.git
+    branch: master
+    private_key: ((git.privatekey))
+- name: version
+  type: semver
+  source:
+    driver: git
+    uri: git@github.com:robaldis/versions.git
+    branch: master
+    file: ${name}.version
+    private_key: ((git.privatekey))
+jobs:
+  # This could be a yaml checker and some other validation, for now this will be an empty job
+  - name: update-dns
+    public: true
+    plan:
+      - get: source-code
+        trigger: true
+      - get: version
+        params:
+          bump: patch
+      - task: build
+        privileged: true
+        config:
+          inputs: 
+            - name: source-code
+            - name: version
+          outputs:
+            - name: .docker
+          params:
+            VERSION_FILE: version/version
+          platform: linux
+          image_resource:
+            name: ""
+            source:
+              repository: mcr.microsoft.com/dotnet/sdk
+              tag: 6.0-alpine
+            type: docker-image
+          run:
+            path: sh
+            args: 
+              - -exc
+              - | 
+                echo Great SUCCESS
+                source ci/testing
+                echo "The end of the pipeline file"
+      - put: version
+        params: 
+          file: version/version
+  - name: build
+    public: true
+    plan:
+      - get: source-code
+        trigger: true
+      - get: version
+        params:
+          bump: patch
+      - task: build
+        privileged: true
+        config:
+          inputs: 
+            - name: source-code
+            - name: version
+          outputs:
+            - name: .docker
+          params:
+            VERSION_FILE: version/version
+          platform: linux
+          image_resource:
+            name: ""
+            source:
+              repository: mcr.microsoft.com/dotnet/sdk
+              tag: 6.0-alpine
+            type: docker-image
+          run:
+            path: sh
+            args: 
+              - -exc
+              - | 
+                echo Great SUCCESS
+      - put: version
+        params: 
+          file: version/version
+  - name: deploy
+    public: true
+    plan:
+      - get: source-code
+        trigger: true
+        passed: [ build]
+      - get: version
+        passed: [ build ]
+      - task: deploy
+        privileged: true
+        config:
+          inputs: 
+            - name: source-code
+            - name: version
+          params:
+            VERSION_FILE: version/version
+          platform: linux
+          image_resource:
+            name: ""
+            source:
+              repository: harbor.robertaldis.com/tools/deploy 
+              username: ((harbor.username))
+              password: ((harbor.password))
+              tag: latest
+            type: docker-image
+          run:
+            path: sh 
+            args: 
+              - -exc
+              - | 
+                export version=$(cat $VERSION_FILE)
+                cd source-code/
+                ls
+                ./deploy
+
