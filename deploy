@@ -1,0 +1,12 @@
+
+#!/bin/bash
+
+helm repo update
+
+# Create if does not already exist
+kubectl create namespace testing-pipeline --dry-run=client -o yaml | kubectl apply -f -
+
+# Delpy with helm
+helm upgrade --install testing-pipeline -n testing-pipeline testing-pipeline t -f values.yaml
+
+
