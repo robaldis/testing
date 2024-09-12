@@ -1,1 +1,6 @@
-echo "This is the testing file"
+module "pihole_internal_dns" {
+  source = "../.."
+  a_records = {
+    "testing.robertaldis.com" = "192.168.109.253/admin",
+  }
+}
