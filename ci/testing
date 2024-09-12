@@ -1,6 +1,5 @@
-module "pihole_internal_dns" {
-  source = "../.."
-  a_records = {
-    "testing.robertaldis.com" = "192.168.109.253/admin",
-  }
+
+resource "pihole_dns_record" "record" {
+  domain = "testing.robertaldis.com"
+  ip     = "192.168.109.253/admin"
 }
