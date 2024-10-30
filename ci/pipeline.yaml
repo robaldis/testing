@@ -3,7 +3,7 @@ resources:
 - name: source-code
   type: git
   source:
-    uri: git@github.com:robaldis/${name}.git
+    uri: git@github.com:robaldis/testing.git
     branch: master
     private_key: ((git.privatekey))
 - name: version
@@ -24,7 +24,7 @@ jobs:
       - get: version
         params:
           bump: patch
-      - task: build
+      - task: update-dns
         privileged: true
         config:
           inputs: 
@@ -38,17 +38,38 @@ jobs:
           image_resource:
             name: ""
             source:
-              repository: mcr.microsoft.com/dotnet/sdk
-              tag: 6.0-alpine
+              repository: hashicorp/terraform
+              tag: latest
             type: docker-image
           run:
             path: sh
             args: 
               - -exc
               - | 
-                echo Great SUCCESS
-                source ci/testing
-                echo "The end of the pipeline file"
+                config=$(cat source-code/ci/testing)
+                echo """
+                terraform {
+                  required_providers {
+                    pihole = {
+                      source = \"ryanwholey/pihole\"
+                    }
+                  }
+                }
+
+                provider \"pihole\" {
+                  url       = \"((pihole.url))\"
+                  api_token = \"((pihole.token))\"
+                }
+
+                resource \"pihole_dns_record\" \"record\" {
+                  domain = \"foo.com\"
+                  ip     = \"127.0.0.1\"
+                }
+                """ > dns.tf
+
+                terraform init
+                terraform apply -auto-approve
+
       - put: version
         params: 
           file: version/version
